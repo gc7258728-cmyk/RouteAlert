@@ -1,0 +1,422 @@
+ROUTEALERT — OBSERVATOIRE DES DÉGRADATIONS ROUTIÈRES
+Version 1.0 | Application pédagogique de génie civil
+
+1. À QUOI SERT L'APPLICATION ?
+
+RouteAlert rassemble les signalements de nids-de-poule : emplacement, photo,
+dimensions approximatives, gravité déclarée, exposition à la circulation et date.
+L'utilisateur peut vérifier un constat, programmer une intervention, renseigner
+les dépenses et enregistrer une réparation avec une photo après intervention.
+
+L'application s'ouvre directement sur un tableau de bord, sans connexion.
+Elle est conçue pour un devoir et une démonstration pédagogique. Elle ne valide
+ni une sécurité routière, ni une conformité réglementaire, ni un devis technique.
+
+Identité visuelle : asphalte, ivoire, jaune signalisation, orange et vert.
+Le dossier livré contient exactement : app.py, requirement.text, README.
+Les ressources graphiques et le CSS sont intégrés dans app.py.
+
+2. INSTALLATION SOUS WINDOWS / VS CODE
+
+Ouvrir le dossier routealert dans VS Code, puis Terminal > Nouveau terminal.
+Si le dossier est situé dans l'espace habituel :
+
+    cd "C:\Users\FIFEN HOUSSEIN\Desktop\APP\routealert"
+    python --version
+    python -m pip install -r requirement.text
+    python -m streamlit run app.py
+
+Si Windows ne reconnaît pas python, sélectionner l'interpréteur dans VS Code
+(Python: Select Interpreter). L'interpréteur utilisé lors de la vérification :
+
+    & "C:\Users\FIFEN HOUSSEIN\AppData\Local\Programs\Python\Python314\python.exe" -m pip install -r requirement.text
+    & "C:\Users\FIFEN HOUSSEIN\AppData\Local\Programs\Python\Python314\python.exe" -m streamlit run app.py
+
+Le navigateur affiche une adresse locale, habituellement http://localhost:8501.
+Le lancement préparé dans cet espace utilise http://localhost:8538.
+Une adresse localhost fonctionne sur la machine qui exécute le serveur ; pour
+envoyer un lien au professeur, utiliser ensuite l'URL publique de déploiement.
+Arrêter un serveur lancé dans le terminal avec Ctrl+C.
+
+Option pour empêcher la création d'un dossier __pycache__ dans le dossier livré :
+
+    python -B -m streamlit run app.py
+
+Python 3.14 et les versions effectivement installées ont été utilisés ici.
+Pour le Cloud, choisir si possible la même version disponible et vérifier les
+journaux d'installation. Les intervalles de requirement.text ne constituent pas
+un verrouillage exact ; une future mise à jour peut nécessiter une vérification.
+
+3. BIBLIOTHÈQUES
+
+streamlit : pages, formulaires, navigation, tableaux et téléchargement.
+numpy : statistiques et simulations reproductibles de Monte-Carlo.
+pandas : tableaux, imports CSV/XLSX et exports CSV.
+plotly : graphiques interactifs, schémas et vue de coordonnées sans tuiles.
+pydeck : carte interactive et sélection des repères.
+Pillow : lecture, vérification, orientation et compression des images.
+openpyxl : lecture et création des classeurs Excel.
+reportlab : génération des rapports PDF en mémoire.
+
+sqlite3, json, datetime, math, uuid, pathlib et les autres modules de la
+bibliothèque standard n'ont pas besoin d'installation séparée.
+
+4. PREMIÈRE PRISE EN MAIN
+
+Dans le menu, cliquer « Charger l'exemple fictif ».
+Six signalements, trois secteurs et quatre statuts sont proposés.
+Toutes les routes, positions, observations et illustrations de cet exemple
+sont fictives. Les images sont des dessins synthétiques, pas des photos réelles.
+Les positions illustratives ne signalent aucune dégradation réelle à Yaoundé.
+
+Le bouton réinitialise l'exemple fictif à chaque clic. Cet espace reste en
+mémoire dans la session du navigateur. Mes données est un registre distinct,
+enregistré dans SQLite. Le changement d'espace ne copie aucun signalement.
+
+Navigation :
+- Tableau de bord : indicateurs, carte, statuts et trois constats à examiner.
+- Carte : filtrer par statut et secteur ; sélectionner un repère puis sa fiche.
+- Nouveau signalement : coordonnées, mesures, appréciations et photo.
+- Registre et fiches : rechercher, consulter, corriger ou supprimer un constat.
+- Priorités et interventions : score, suivi, dates, équipe et finances.
+- Calculs et incertitudes : géométrie, simulations, statistiques, sensibilité.
+- Rapports et échanges : PDF, CSV, Excel, sauvegarde et imports.
+- Comprendre et tester : parcours guidé et résultats de référence.
+
+Sur téléphone, ouvrir le menu avec le bouton en haut à gauche.
+Les colonnes se réorganisent et les indicateurs passent sur deux colonnes.
+Les grands tableaux disposent d'un défilement horizontal.
+La palette intégrée est optimisée pour le thème clair : si un navigateur impose
+un thème sombre, choisir Light / Clair dans le menu Streamlit en haut à droite.
+
+5. SAISIR UN SIGNALEMENT
+
+Champs obligatoires : route/rue, secteur/quartier, coordonnées, date et dimensions.
+Latitude et longitude : degrés décimaux WGS84 ; aucune recherche d'adresse ni
+géolocalisation automatique n'est effectuée. Les coordonnées préremplies sont
+indicatives et doivent être remplacées par celles du constat réel.
+La latitude est limitée à [-85 ; 85] pour la carte Web Mercator.
+Les dimensions sont en centimètres, strictement positives :
+longueur et largeur <= 2 000 cm ; profondeur <= 200 cm.
+Ces bornes sont des limites du logiciel, pas des seuils de gravité.
+La date de signalement ne peut pas être dans le futur.
+
+La gravité (Faible, Modérée, Élevée) est une appréciation déclarée.
+L'exposition (Faible, Moyenne, Forte) est une appréciation qualitative de
+l'utilisation de la voie. Elle ne représente pas un comptage de trafic.
+La gravité déclarée n'est pas calculée automatiquement à partir de la photo.
+
+Photo facultative : JPEG, PNG ou WebP, <= 5 Mo et <= 20 millions de pixels.
+L'image est réorientée, convertie en JPEG et redimensionnée (1 400 x 1 000 max),
+sans conserver les métadonnées EXIF. Les photos sont stockées avec le registre.
+Le logiciel n'analyse pas les pixels pour mesurer un défaut.
+
+La fiche signale les autres constats à moins de 30 m : c'est une invitation à
+examiner un doublon possible, sans fusion automatique de deux défauts distincts.
+
+6. CALCULS VÉRIFIABLES À LA MAIN
+
+Pour une longueur L, une largeur l et une profondeur p, toutes en cm :
+
+    Surface (m²) = L x l / 10 000
+    Volume (m³)  = L x l x p / 1 000 000
+    Volume (L)   = L x l x p / 1 000
+
+Exemple DEMO-001 : 80 x 50 x 8 cm.
+Surface = 0,40 m² ; volume = 0,032 m³ = 32 litres.
+Un nid-de-poule réel a une forme irrégulière. Le résultat correspond à un
+parallélépipède équivalent. Préparation, découpe, compactage, surépaisseurs et
+matériaux ne sont pas modélisés. Le volume n'est pas une quantité à commander.
+
+7. SCORE DE CLASSEMENT PÉDAGOGIQUE
+
+Composantes :
+    D = min(profondeur_cm / 10 ; 1)
+    A = min(surface_m² / 1 ; 1)
+    E = 0 (exposition faible), 0,5 (moyenne), 1 (forte)
+
+Poids initiaux : profondeur 40, surface 35, exposition 25.
+
+    Score = 100 x (wD x D + wA x A + wE x E) / (wD + wA + wE)
+
+DEMO-001 : D=0,8 ; A=0,4 ; E=1.
+Score = 32 + 14 + 25 = 71 / 100.
+
+DEMO-003 : 98,6 /100 ; DEMO-006 : 79,9 /100.
+Un volume plus grand ne signifie pas automatiquement un score plus élevé.
+La gravité déclarée reste distincte du score pour éviter un double comptage.
+Les poids se changent dans Priorités et interventions et sont normalisés par
+leur somme. Un total nul est refusé. Ce réglage est exploratoire, propre à cette
+vue : le tableau de bord et les exports gardent les poids par défaut 40/35/25.
+Les valeurs 10 cm et 1 m² sont des choix pédagogiques sans origine réglementaire.
+
+8. INTERVENTIONS ET FINANCES
+
+Parcours : Signalé -> Vérifié -> Intervention prévue -> Réparé.
+Une réparation peut passer directement de Vérifié à Réparé si elle a déjà eu lieu.
+Un passage de Signalé à Réparé ou Intervention prévue est refusé.
+Depuis Intervention prévue, revenir à Vérifié est possible pour reconsidérer
+la programmation. Depuis Réparé, choisir Vérifié pour réouvrir le dossier.
+
+La date prévue est exigée au statut Intervention prévue. Elle peut être dépassée :
+le tableau de bord comptabilise alors l'intervention en retard.
+La date réelle est exigée au statut Réparé, entre la date de signalement et
+aujourd'hui. Une réparation anticipée par rapport à la date prévue est permise.
+Une réouverture retire la date réelle courante ; l'historique garde les événements
+antérieurs. Une ancienne photo après intervention reste visible et doit être
+interprétée avec son historique.
+Le champ Compte rendu décrit l'état courant ; chaque sauvegarde ajoute aussi
+un événement à l'historique (200 événements maximum par dossier).
+La photo après intervention est facultative et peut être remplacée.
+
+Budget estimé et dépense réelle cumulée sont saisis manuellement en FCFA.
+Ils ne sont pas calculés à partir du volume. Le graphique compare leurs sommes
+par secteur sur tous les dossiers du registre actif.
+Un zéro signifie aucun montant saisi ; le logiciel ne suppose pas que le travail
+est gratuit. Aucun paiement ni échange de message n'est déclenché.
+
+9. PROBABILITÉS ET SIMULATION
+
+Les dimensions approximatives peuvent être représentées par des lois
+triangulaires symétriques et indépendantes :
+minimum = mesure x (1-erreur/100), mode = mesure, maximum = mesure x (1+erreur/100).
+Les pourcentages d'erreur sont des hypothèses choisies par l'utilisateur, pas
+des mesures de précision certifiées. Ils sont limités à 90 %.
+Chaque tirage multiplie trois dimensions puis convertit le résultat en litres.
+
+Sorties : moyenne, médiane, écart-type d'échantillon, quantiles 2,5 % et 97,5 %,
+histogramme et fréquence des tirages V strictement supérieurs au seuil choisi.
+L'intervalle entre quantiles contient environ 95 % des volumes de ce modèle ;
+ce n'est pas un intervalle de confiance sur une vraie valeur mesurée.
+Le franchissement du seuil concerne un volume, pas un accident.
+
+Choix : 1 000, 10 000 ou 50 000 tirages et une graine reproductible.
+Après modification du formulaire, cliquer à nouveau Simuler les volumes.
+Le résultat indique les hypothèses effectivement utilisées au dernier calcul.
+Changer de fiche ou de dimensions invalide l'affichage des anciennes simulations.
+
+Test exact : 80/50/8 cm, erreurs 0/0/0 %, seuil 32 L.
+Tous les tirages valent 32 L ; P(V > 32) = 0 % ; écart-type = 0 L.
+Avec un seuil 31 L, P(V > 31) = 100 %.
+Avec des erreurs non nulles, la moyenne simulée se rapproche de 32 L parce
+que les dimensions sont symétriques et supposées indépendantes.
+Les corrélations et les erreurs systématiques ne sont pas modélisées.
+
+Sensibilité : +10 % sur une seule dimension -> +10 % sur le volume.
++10 % sur les trois -> facteur 1,1³ = 1,331, soit +33,1 %.
+
+Les statistiques globales décrivent les signalements du registre. Elles ne
+constituent pas un échantillon représentatif de toutes les routes du secteur.
+
+10. CARTE
+
+La carte en ligne utilise les tuiles CARTO et les données OpenStreetMap,
+sans clé API dans le code. Le fond nécessite un accès Internet du navigateur.
+La couleur représente le statut ; la taille des repères dépend du score.
+Cliquer un repère puis « Ouvrir ce signalement » pour consulter sa fiche.
+Une liste de sélection reste disponible sous la carte complète.
+La vue « Repères sans fond de carte » affiche les coordonnées dans un graphique
+Plotly interactif sans tuiles externes. Elle n'affiche pas le réseau des rues.
+L'emprise initiale est adaptée à la dispersion des positions ; les points très
+éloignés peuvent nécessiter un zoom ou un filtrage par secteur.
+
+11. IMPORTS ET EXPORTS
+
+PDF global : tableau des constats et hypothèses du score par défaut.
+PDF de fiche : informations, photos disponibles et historique.
+CSV : tableau de consultation UTF-8 avec BOM, séparateur point-virgule.
+Excel : tableau de consultation avec colonnes, filtre et en-tête figé.
+Les textes ressemblant à des formules sont neutralisés dans CSV/Excel.
+JSON : sauvegarde complète, photos et historique compris, avec indicateur fictif.
+
+Import de nouveaux constats : utiliser « Télécharger le modèle CSV à remplir ».
+Colonnes exactes :
+    route;secteur;latitude;longitude;date_signalement;longueur_cm;largeur_cm;profondeur_cm;gravite;exposition;description
+
+Exemple de ligne (remplacer la date par une date passée ou aujourd'hui) :
+    Voie Test;Secteur fictif;3.87;11.51;2026-10-01;80;50;8;Élevée;Forte;Essai fictif
+
+Accepte CSV UTF-8 à virgules ou points-virgules, et première feuille XLSX.
+Un point ou une virgule décimale est accepté pour les nombres (dans un CSV
+à virgules, protéger les valeurs contenant une virgule avec des guillemets).
+Dates attendues en CSV : AAAA-MM-JJ. Les dates Excel natives sont aussi acceptées.
+2 Mo, 500 lignes maximum ; tout le fichier est vérifié avant l'ajout.
+Une ligne invalide bloque l'ensemble de l'import.
+Les imports créent des dossiers Signalé, sans photo et sans budget.
+Un doublon exact de route/coordonnées/date dans le fichier ou avec le registre
+est refusé. Les espaces en bordure sont retirés ; la casse de la route est ignorée.
+Les CSV/Excel de consultation exportés utilisent des intitulés lisibles et ne
+sont pas destinés à être réimportés directement : employer le modèle d'import.
+
+Restauration JSON : ajoute des copies avec de nouveaux identifiants.
+Elle ne remplace et ne supprime aucun dossier existant ; l'ajout est à confirmer.
+Un deuxième import d'une même sauvegarde peut produire des doublons.
+Une sauvegarde marquée fictive est refusée dans Mes données ; utiliser l'espace
+Exemple fictif pour la tester. Limite de fichier 33 Mo.
+
+12. STOCKAGE ET SAUVEGARDES
+
+Windows, chemin par défaut :
+    C:\Users\FIFEN HOUSSEIN\Documents\Codex\data\routealert\routealert.sqlite3
+Le nom du compte Windows s'adapte automatiquement via Path.home().
+Linux / hébergement distant : ~/.local/share/routealert/routealert.sqlite3.
+
+Pour choisir un emplacement extérieur au dossier livré, avant le lancement :
+    $env:ROUTEALERT_DATA_DIR = "D:\Donnees\RouteAlert"
+    python -m streamlit run app.py
+
+Le registre stocke au maximum 500 constats, 32 Mo après sérialisation et 200
+événements d'historique par fiche. Les écritures SQLite sont atomiques.
+Une protection de révision refuse l'écrasement si une autre session a enregistré
+entre-temps ; actualiser, relire le dossier puis refaire la modification.
+Tous les visiteurs du même serveur utilisent le même registre Mes données.
+L'exemple reste propre à la session ; il ne modifie pas la base réelle.
+
+Sur Streamlit Community Cloud, le disque local n'est pas un stockage durable
+garanti. Télécharger régulièrement le JSON pour pouvoir restaurer les dossiers.
+Cette version n'est pas reliée à une base de données distante et ne prétend pas
+assurer une collecte publique durable en production.
+
+13. PUBLICATION GITHUB ET DÉPLOIEMENT STREAMLIT COMMUNITY CLOUD
+
+Le fichier demandé reste requirement.text dans le dossier livré.
+Community Cloud reconnaît le nom standard requirements.txt pour installer les
+dépendances Python ; requirement.text n'est pas détecté comme fichier pip.
+Pour déployer, préparer un AUTRE dossier de travail, hors de routealert, puis y
+copier app.py, README et requirement.text en le nommant requirements.txt.
+Ainsi le dossier livré garde ses trois noms demandés et le dépôt de déploiement
+peut lui aussi contenir seulement app.py, requirements.txt et README.
+
+Exemple PowerShell (choisir un dossier neuf ; ne pas écraser un déploiement existant) :
+    $deploymentDir = "$env:USERPROFILE\Documents\Codex\RouteAlert-deploiement"
+    New-Item -ItemType Directory -Path $deploymentDir
+    Copy-Item -LiteralPath .\app.py -Destination $deploymentDir
+    Copy-Item -LiteralPath .\README -Destination $deploymentDir
+    Copy-Item -LiteralPath .\requirement.text -Destination "$deploymentDir\requirements.txt"
+    Set-Location -LiteralPath $deploymentDir
+
+Sur GitHub, créer un dépôt vide nommé routealert dans ton compte habituel.
+Ne pas demander un README automatique si tu initialises le dépôt avec Git local.
+Dans le terminal du dossier de déploiement :
+
+    git init
+    git add app.py requirements.txt README
+    git commit -m "Premiere version de RouteAlert"
+    git branch -M main
+    git remote add origin https://github.com/gc7258728-cmyk/routealert.git
+    git remote -v
+    git push -u origin main
+
+Ce lien est un exemple de nom de dépôt à créer : l'application n'a pas créé ni
+vérifié l'existence de ce dépôt GitHub. Si origin existe déjà, vérifier sa valeur,
+puis utiliser git remote set-url origin URL si nécessaire.
+VS Code peut demander une authentification GitHub dans le navigateur.
+
+Dans Streamlit Community Cloud : Create app, sélectionner le dépôt routealert,
+la branche main et le fichier app.py, puis Deploy.
+Dans Paste URL, utiliser l'URL du fichier, après création du dépôt :
+    https://github.com/gc7258728-cmyk/routealert/blob/main/app.py
+Un lien de dépôt seul peut ne pas remplir le chemin du fichier Python.
+Choisir une version de Python compatible dans les réglages avancés, lire les
+journaux d'installation et vérifier que toutes les bibliothèques sont installées.
+Un message « No module named ... » conduit à vérifier requirements.txt et la
+branche effectivement déployée. Ne pas mettre une commande pip dans app.py.
+
+L'URL publique finale est fournie par Streamlit ; elle n'est pas inventée ici.
+Tester ensuite la carte, l'ajout, les exports et les sauvegardes sur cet hébergement.
+Le déploiement externe n'a pas été effectué dans cette livraison.
+
+Mises à jour : modifier l'application locale, tester, recopier app.py et README
+dans le dossier de déploiement ; si les dépendances changent, mettre aussi à jour
+la copie requirements.txt. Puis, depuis le dossier du dépôt de déploiement :
+
+    git status
+    git add app.py requirements.txt README
+    git commit -m "Amelioration de RouteAlert"
+    git push
+
+Documentation officielle consultée :
+https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/app-dependencies
+https://docs.streamlit.io/develop/api-reference/charts/st.pydeck_chart
+
+14. JEUX DE TEST ET RÉSULTATS ATTENDUS
+
+Recharger l'exemple fictif avant chaque série pour retrouver les valeurs initiales.
+
+A. Tableau de bord
+   6 constats, 5 ouverts, 1 réparé ; volume ouvert 218,30 L.
+   2 interventions prévues, dont 1 en retard.
+   1 réparation en 15 jours ; taux de réparation = 16,7 %.
+   Budget estimé total 225 000 FCFA ; dépenses réelles 68 000 FCFA.
+
+B. Carte
+   6 repères aux coordonnées illustratives ; sélectionner un repère puis sa fiche.
+   Filtrer Réparé : un seul dossier, DEMO-004.
+   Choisir la vue sans fond de carte : mêmes positions et mêmes statuts.
+
+C. Nouveau constat
+   Route vide : enregistrement refusé avec un message explicite.
+   Route Test, Secteur Test, coordonnées valides, 80/50/8 cm, exposition forte :
+   nouveau dossier Signalé ; surface 0,40 m², volume 32 L, score 71.
+   Le dossier apparaît dans la carte et le tableau de bord.
+
+D. Modification
+   DEMO-001, longueur 80 -> 100 cm : surface 0,50 m² ; volume 40 L ; score 74,5.
+   Remettre 80 cm pour retrouver les résultats de référence.
+   Une photo illisible est refusée ; l'ancien état n'est pas partiellement enregistré.
+
+E. Interventions
+   DEMO-002 -> Réparé : refus tant qu'il est Signalé.
+   Enregistrer Vérifié, puis Réparé avec la date du jour : délai 5 jours.
+   Repasser Vérifié : la date réelle courante disparaît, l'historique est conservé.
+
+F. Simulation
+   DEMO-001, erreurs nulles, seuil 32 : tous volumes à 32 L et probabilité 0 %.
+   Erreurs nulles, seuil 31 : probabilité 100 %.
+   Erreurs 10/10/20 %, 10 000 tirages, graine 42 : distribution non constante,
+   moyenne voisine de 32 L et résultat reproductible avec les mêmes entrées.
+
+G. Imports
+   Importer le modèle : un dossier de 32 L ajouté.
+   Réimporter exactement le même fichier : refus de doublon, aucun nouvel ajout.
+   Retirer une colonne obligatoire : import refusé sans modification du registre.
+
+H. Exports et sauvegarde
+   Ouvrir PDF, CSV et Excel, vérifier les références et les unités.
+   Télécharger le JSON et le restaurer dans Exemple fictif : copies supplémentaires
+   avec nouveaux identifiants, photos et historique conservés.
+   Revenir à Mes données : les modifications fictives n'y figurent pas.
+
+15. VÉRIFICATIONS DE LIVRAISON
+
+Vérifications effectuées le 28 octobre 2026 :
+- Installation par python -m pip install -r requirement.text : dépendances présentes.
+- Syntaxe Python et livraison avec exactement les trois fichiers demandés.
+- 14 tests automatisés réussis : géométrie, conversions, scores et pondérations,
+  refus des valeurs impossibles et dates invalides, transitions de statut,
+  réouverture, photos, simulations fixes et aléatoires reproductibles, CSV/XLSX,
+  sauvegardes additives, PDF, persistance et protection de révision SQLite.
+- Test de séparation entre exemple fictif et registre réel avec Streamlit AppTest.
+- Parcours dans Microsoft Edge : huit pages, création et modification d'un
+  constat, refus d'une réparation non vérifiée, vérification puis réparation,
+  photos jointes, simulation, téléchargements, import CSV, refus de doublon et
+  restauration JSON. Les essais utilisent exclusivement l'espace fictif.
+- Contrôles visuels sur des captures Edge en 1 440, 768, 390 et 320 pixels,
+  avec vérification automatique des débordements horizontaux et des principaux
+  textes de boutons/indicateurs. Menu et colonnes contrôlés sur petit écran.
+- Clic sur un repère et ouverture de sa fiche vérifiés en 1 440 et 320 pixels.
+- PDF de synthèse et fiche à photos rendus en images et contrôlés visuellement ;
+  polices intégrées, titres et photos regroupés, aucune lettre hors des marges
+  sur les trois pages de référence examinées.
+- Le registre réel reste vide après les essais ; seuls des fichiers temporaires
+  de contrôle et des données fictives séparées ont été utilisés.
+
+Limites de ces vérifications : les essais mobiles utilisent des dimensions de
+navigateur, pas des téléphones physiques. Safari, Firefox et les lecteurs d'écran
+n'ont pas été testés. Les tuiles de la carte dépendent du réseau et de CARTO.
+Le déploiement Community Cloud et la collecte durable en ligne restent à vérifier
+sur l'hébergement choisi. Cette livraison reste une application de devoir.
+
+Les scripts de test, captures, exports de contrôle et l'archive ZIP se trouvent
+hors du dossier routealert. Aucun secret, test ou fichier de données n'est inclus
+dans les trois fichiers livrés.
